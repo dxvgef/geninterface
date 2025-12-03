@@ -1,7 +1,9 @@
-package main
+package test
 
 import (
 	"testing"
+
+	"geninterface/pkg"
 )
 
 // Config 配置参数
@@ -29,7 +31,7 @@ type Logger struct {
 }
 
 func Test_generator(t *testing.T) {
-	err := Generator("generator_test.go", "Config", false)
+	err := pkg.Generator("generator_test.go", "Config", false)
 	if err != nil {
 		t.Fatal(err)
 	}

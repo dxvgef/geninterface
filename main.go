@@ -3,6 +3,8 @@ package main
 import (
 	"flag"
 	"fmt"
+
+	"geninterface/pkg"
 )
 
 var Version = "dev"
@@ -28,7 +30,7 @@ func main() {
 		return
 	}
 
-	err := Generator(*filePath, *structName, *genSetter)
+	err := pkg.Generator(*filePath, *structName, *genSetter)
 	if err != nil {
 		fmt.Println(err)
 		return
