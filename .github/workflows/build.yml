@@ -1,0 +1,88 @@
+name: Build, Package and Release
+
+on:
+  push:
+    tags:
+      - "v*"  # 仅触发版本标签，例如 v1.0.0
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        goos: [linux, windows, darwin]
+        goarch: [amd64, arm64]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+
+      - name: Build binary with version info
+        run: |
+          mkdir -p build
+          BIN_NAME="geninterface-${{ matrix.goos }}-${{ matrix.goarch }}"
+          if [ "${{ matrix.goos }}" = "windows" ]; then
+            BIN_NAME="${BIN_NAME}.exe"
+          fi
+          # 将 Git tag 注入到可执行文件
+          GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build \
+            -ldflags="-s -w -X 'main.Version=${GITHUB_REF_NAME#refs/tags/}'" \
+            -o "build/${BIN_NAME}" .
+
+      - name: Package binary with README/LICENSE
+        run: |
+          mkdir -p dist
+          BIN_FILE=$(ls build)
+          PACKAGE_NAME="${BIN_FILE%.*}-${{ github.ref_name }}"
+          
+          # 临时目录放可执行文件、README 和 LICENSE
+          mkdir -p package_tmp
+          cp build/$BIN_FILE package_tmp/
+          cp README.md LICENSE package_tmp/ 2>/dev/null || true
+
+          if [[ $BIN_FILE == *.exe ]]; then
+            zip -r "dist/${PACKAGE_NAME}.zip" package_tmp/*
+          else
+            tar -czf "dist/${PACKAGE_NAME}.tar.gz" -C package_tmp .
+          fi
+          rm -rf package_tmp
+
+      - name: Generate global checksums file
+        run: |
+          cd dist
+          echo "# SHA256 checksums for release ${{ github.ref_name }}" > checksums.txt
+          for f in $(ls | grep -E '(\.tar\.gz|\.zip)$' | sort); do
+            sha256sum "$f" | awk '{print $1 "  " $2}' >> checksums.txt
+          done
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-files
+          path: dist/*
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: release-files
+          path: release
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: "Release ${{ github.ref_name }}"
+          files: release/*
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
