@@ -6,7 +6,7 @@ on:
       - "v*"
 
 # -----------------------
-# Job 1: 常规平台构建
+# Job 1: 常规平台构建（排除 Windows ARM64）
 # -----------------------
 jobs:
   build_matrix:
@@ -15,9 +15,9 @@ jobs:
       matrix:
         goos: [linux, windows, darwin]
         goarch: [amd64, arm64]
-      exclude:
-        - goos: windows
-          goarch: arm64   # Windows ARM64 单独处理
+        exclude:
+          - goos: windows
+            goarch: arm64   # Windows ARM64 单独处理
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -35,7 +35,7 @@ jobs:
             go build -ldflags="-s -w -X 'main.Version=${GITHUB_REF_NAME#refs/tags/}'" \
             -o "build/${BIN_NAME}" .
 
-      - name: Package binary
+      - name: Package binary with README/LICENSE
         run: |
           mkdir -p dist
           BIN_FILE=$(ls build)
@@ -65,10 +65,10 @@ jobs:
           path: dist/*
 
   # -----------------------
-  # Job 2: Windows ARM64 构建（自托管或专用 runner）
+  # Job 2: Windows ARM64 构建（自托管或交叉编译）
   # -----------------------
   build_windows_arm64:
-    runs-on: self-hosted   # 或者你自己配置的 Windows ARM64 runner
+    runs-on: self-hosted   # 或你自己配置的 Windows ARM64 runner
     needs: build_matrix
     steps:
       - uses: actions/checkout@v4
@@ -79,7 +79,7 @@ jobs:
       - name: Build binary
         run: |
           mkdir -p build
-          BIN_NAME="geninterface-windows-arm64.exe"
+          BIN_NAME="myapp-windows-arm64.exe"
           go build -ldflags="-s -w -X 'main.Version=${GITHUB_REF_NAME#refs/tags/}'" -o "build/$BIN_NAME" .
 
       - name: Package binary
