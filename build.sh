@@ -1,29 +1,20 @@
 #!/usr/bin/env bash
 set -e
 
-# -----------------------
-# 配置
-# -----------------------
-APP_NAME="geninterface"          # 可执行文件基础名
-BUILD_DIR="build"       # 输出目录
+APP_NAME="geninterface"
+BUILD_DIR="build"
 
 GOOS_LIST=("linux" "windows" "darwin")
 GOARCH_LIST=("amd64" "arm64")
 
-# -----------------------
 # 获取最新 Git 标签作为版本号
-# -----------------------
 VERSION=$(git describe --tags --abbrev=0 2>/dev/null || echo "dev")
 echo "Building version: $VERSION"
 
-# -----------------------
 # 创建输出目录
-# -----------------------
 mkdir -p "$BUILD_DIR"
 
-# -----------------------
 # 循环构建并压缩
-# -----------------------
 for GOOS in "${GOOS_LIST[@]}"; do
     for GOARCH in "${GOARCH_LIST[@]}"; do
         BIN_NAME="${APP_NAME}_${GOOS}_${GOARCH}"
@@ -55,9 +46,7 @@ for GOOS in "${GOOS_LIST[@]}"; do
     done
 done
 
-# -----------------------
 # 生成 checksums.txt
-# -----------------------
 echo "Generating checksums.txt ..."
 cd "$BUILD_DIR"
 echo "# SHA256 checksums for version $VERSION" > checksums.txt
