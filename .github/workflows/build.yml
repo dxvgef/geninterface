@@ -3,48 +3,46 @@ name: Build, Package and Release
 on:
   push:
     tags:
-      - "v*"  # 仅触发版本标签，例如 v1.0.0
+      - "v*"
 
+# -----------------------
+# Job 1: 常规平台构建
+# -----------------------
 jobs:
-  build:
+  build_matrix:
     runs-on: ubuntu-latest
     strategy:
       matrix:
         goos: [linux, windows, darwin]
         goarch: [amd64, arm64]
-
+      exclude:
+        - goos: windows
+          goarch: arm64   # Windows ARM64 单独处理
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
         with:
           go-version: "1.22"
 
-      - name: Build binary with version info
+      - name: Build binary
         run: |
           mkdir -p build
-          BIN_NAME="geninterface-${{ matrix.goos }}-${{ matrix.goarch }}"
-          if [ "${{ matrix.goos }}" = "windows" ]; then
+          BIN_NAME="myapp-${{ matrix.goos }}-${{ matrix.goarch }}"
+          if [[ "${{ matrix.goos }}" == "windows" ]]; then
             BIN_NAME="${BIN_NAME}.exe"
           fi
-          # 将 Git tag 注入到可执行文件
-          GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build \
-            -ldflags="-s -w -X 'main.Version=${GITHUB_REF_NAME#refs/tags/}'" \
+          GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} \
+            go build -ldflags="-s -w -X 'main.Version=${GITHUB_REF_NAME#refs/tags/}'" \
             -o "build/${BIN_NAME}" .
 
-      - name: Package binary with README/LICENSE
+      - name: Package binary
         run: |
           mkdir -p dist
           BIN_FILE=$(ls build)
           PACKAGE_NAME="${BIN_FILE%.*}-${{ github.ref_name }}"
-          
-          # 临时目录放可执行文件、README 和 LICENSE
           mkdir -p package_tmp
           cp build/$BIN_FILE package_tmp/
           cp README.md LICENSE package_tmp/ 2>/dev/null || true
-
           if [[ $BIN_FILE == *.exe ]]; then
             zip -r "dist/${PACKAGE_NAME}.zip" package_tmp/*
           else
@@ -52,7 +50,7 @@ jobs:
           fi
           rm -rf package_tmp
 
-      - name: Generate global checksums file
+      - name: Generate checksums
         run: |
           cd dist
           echo "# SHA256 checksums for release ${{ github.ref_name }}" > checksums.txt
@@ -66,17 +64,56 @@ jobs:
           name: release-files
           path: dist/*
 
-  release:
-    needs: build
-    runs-on: ubuntu-latest
+  # -----------------------
+  # Job 2: Windows ARM64 构建（自托管或专用 runner）
+  # -----------------------
+  build_windows_arm64:
+    runs-on: self-hosted   # 或者你自己配置的 Windows ARM64 runner
+    needs: build_matrix
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
 
+      - name: Build binary
+        run: |
+          mkdir -p build
+          BIN_NAME="geninterface-windows-arm64.exe"
+          go build -ldflags="-s -w -X 'main.Version=${GITHUB_REF_NAME#refs/tags/}'" -o "build/$BIN_NAME" .
+
+      - name: Package binary
+        run: |
+          mkdir -p dist
+          mkdir -p package_tmp
+          cp build/myapp-windows-arm64.exe package_tmp/
+          cp README.md LICENSE package_tmp/ 2>/dev/null || true
+          zip -r "dist/myapp-windows-arm64-${{ github.ref_name }}.zip" package_tmp/*
+          rm -rf package_tmp
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-arm64
+          path: dist/*
+
+  # -----------------------
+  # Job 3: 发布 Release
+  # -----------------------
+  release:
+    needs: [build_matrix, build_windows_arm64]
+    runs-on: ubuntu-latest
     steps:
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
           name: release-files
           path: release
-
+      - name: Download Windows ARM64 artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-arm64
+          path: release
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
