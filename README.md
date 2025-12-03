@@ -5,7 +5,7 @@ This is a command-line tool that generates interfaces as well as Getter and Sett
 ## Usage:
 
 ```shell
-geninterface -file=main.go -struct=Config -setter=true
+geninterface -file=generator_test.go -struct=Config -setter=true
 ```
 
 ## Parameters:
