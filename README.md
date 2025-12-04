@@ -24,9 +24,9 @@ geninterface -file=generator_test.go -struct=Config -setter=true
 
 The following files will be created in the same directory as the target file:
 
-- <struct><interface_file_suffix>.go
-- <struct><getter_file_suffix>.go
-- <struct><setter_file_suffix>.go
+- {struct}{interface_file_suffix}.go
+- {struct}{getter_file_suffix}.go
+- {struct}{setter_file_suffix}.go
 
 ## Note:
 
