@@ -1,2 +1,4 @@
 /build/
 /commit-prompt.txt
+/golangci-lint.sh
+/.golangci.yml
