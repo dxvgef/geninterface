@@ -10,19 +10,23 @@ geninterface -file=generator_test.go -struct=Config -setter=true
 
 ## Parameters:
 
-- file: The Go source file for which the code will be generated
-- struct: The name of the struct to generate code for
-- setter: Whether to generate Setter methods. When set to false, only Getter methods will be generated
+- file: the Go source file for which the code will be generated, can be a file or directory
+- struct: the name of the struct to generate code for, use commas to separate multiple names
+- setter: whether to generate Setter methods. When set to false, only Getter methods will be generated
+- perm: generated file permission
+- any: use the any type instead of the interface{} type
+- getter_file_suffix: generated getter file suffix
+- setter_file_suffix: generated setter file suffix
+- interface_name_suffix: generated interface name suffix
+- interface_file_suffix: generated interface file suffix
 
 ## Generated files：
 
 The following files will be created in the same directory as the target file:
 
-- {file}_interface.go
-- {file}_getter.go
-- {file}_setter.go
-
-{file} is the name of the target file
+- <struct><interface_file_suffix>.go
+- <struct><getter_file_suffix>.go
+- <struct><setter_file_suffix>.go
 
 ## Note:
 
