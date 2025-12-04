@@ -17,7 +17,7 @@ func main() {
 
 	showVersion := flag.Bool("version", false, "Show version")
 
-	filePath := flag.String("file", "", "struct file")
+	target := flag.String("target", "", "target file (file or directory)")
 	structName := flag.String("struct", "", "struct name, use commas to separate multiple names")
 	genSetter := flag.Bool("setter", false, "generate setter method")
 	filePerm := flag.String("perm", "0600", "generated file permission")
@@ -33,12 +33,12 @@ func main() {
 		return
 	}
 
-	if *filePath == "" {
+	if *target == "" {
 		fmt.Println("error: please provide a Go file path using -file")
 		os.Exit(1)
 	}
 
-	files, err := collectGoFiles(*filePath)
+	files, err := collectGoFiles(*target)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
